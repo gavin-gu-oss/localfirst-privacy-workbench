@@ -9,8 +9,9 @@
   <body>
     <header class="topbar">
       <div>
+        <span class="kicker">Hybrid AI Workbench · Privacy First</span>
         <h1>LocalFirst 隐私票据脱敏台</h1>
-        <p class="subtitle">端侧 Gemini Nano 本地脱敏 · 云端 Gemini 深度分析</p>
+        <p class="subtitle">敏感隐私在端侧本地脱敏与提炼，跨文档深度分析仅将脱敏占位符交由云端 Gemini</p>
       </div>
       <div class="badges">
         <span id="engine-badge" class="badge badge-idle">检测端侧模型中...</span>
@@ -19,35 +20,93 @@
     </header>
 
     <main class="layout">
-      <section class="card">
-        <div class="card-head">
-          <h2>输入票据 / 病历原文</h2>
-          <div class="sample-actions">
-            <button id="btn-sample-medical" type="button" class="ghost small">填入病历样例</button>
-            <button id="btn-sample-receipt" type="button" class="ghost small">填入票据样例</button>
+      <section class="flow-strip" aria-label="混合推理流程">
+        <div id="step-redact" class="flow-step">
+          <span class="step-num">01</span>
+          <div>
+            <strong>本地零外发脱敏</strong>
+            <p>正则精准替换隐私，医院/药名/商户零误伤，映射仅存内存</p>
           </div>
         </div>
-        <textarea id="input-text" rows="6" placeholder="粘贴包含姓名、身份证号、卡号、地址等敏感信息的文本..."></textarea>
-        <div class="actions">
-          <button id="btn-ondevice" type="button">本地脱敏 + 提炼 (Nano)</button>
-          <button id="btn-cloud" type="button" class="secondary">云端深度对比 / 报告 (Cloud)</button>
-          <button id="btn-ping" type="button" class="ghost">端侧连通性自检</button>
+        <div id="step-nano" class="flow-step">
+          <span class="step-num">02</span>
+          <div>
+            <strong>端侧 Gemini Nano 提炼</strong>
+            <p>Chrome Prompt API 本机推理，断网可用，数据不离设备</p>
+          </div>
+        </div>
+        <div id="step-cloud" class="flow-step flow-step-cloud">
+          <span class="step-num">03</span>
+          <div>
+            <strong>云端 Gemini 跨文档分析</strong>
+            <p>Firebase AI Logic 仅收脱敏占位符，完成费用汇总与异常核对</p>
+          </div>
         </div>
       </section>
 
+      <section class="card quick-demo-bar">
+        <div class="quick-demo-copy">
+          <strong>评委一键演示</strong>
+          <span>一步完成「填入样例 → 本地零误伤脱敏 → 端侧 Nano 要点提炼」，并自动缓存脱敏文本供云端对比</span>
+        </div>
+        <div class="quick-demo-actions">
+          <button id="btn-quick-medical" type="button">一键演示：病历脱敏 + 提炼</button>
+          <button id="btn-quick-receipt" type="button" class="outline-local">一键演示：票据脱敏 + 提炼</button>
+        </div>
+      </section>
       <section class="card metrics">
-        <h2>推理延迟对比</h2>
+        <div class="card-head">
+          <h2>混合引擎与推理延迟对比</h2>
+          <span id="memory-badge" class="pill">内存已缓存脱敏文档：0 份</span>
+        </div>
         <div class="metric-grid">
-          <div class="metric"><span>端侧 Nano</span><strong id="latency-ondevice">-- ms</strong></div>
-          <div class="metric"><span>云端 Gemini</span><strong id="latency-cloud">-- ms</strong></div>
-          <div class="metric"><span>当前状态</span><strong id="state-label">IDLE</strong></div>
+          <div class="metric metric-local">
+            <span>端侧 Nano 延迟</span>
+            <strong id="latency-ondevice">-- ms</strong>
+            <small>本地零外发 · 断网可用</small>
+          </div>
+          <div class="metric metric-cloud">
+            <span>云端 Gemini 延迟</span>
+            <strong id="latency-cloud">-- ms</strong>
+            <small>仅传脱敏占位符 · Firebase AI</small>
+          </div>
+          <div class="metric metric-state">
+            <span>当前状态</span>
+            <strong id="state-label">IDLE</strong>
+            <small id="state-hint">正在检测端侧模型...</small>
+          </div>
         </div>
       </section>
 
-      <section class="card">
-        <h2>输出结果</h2>
-        <pre id="output-box" class="output">尚未执行推理。</pre>
-      </section>
+      <div class="workspace">
+        <section class="card">
+          <div class="card-head">
+            <h2>输入票据 / 病历原文</h2>
+            <div class="sample-actions">
+              <button id="btn-sample-medical" type="button" class="ghost small">填入病历样例</button>
+              <button id="btn-sample-receipt" type="button" class="ghost small">填入票据样例</button>
+            </div>
+          </div>
+          <textarea id="input-text" rows="8" placeholder="粘贴包含姓名、身份证号、银行卡号、手机号、地址、邮箱的文本，或点击上方样例 / 一键演示..."></textarea>
+          <div class="actions">
+            <button id="btn-ondevice" type="button">本地脱敏 + 提炼 (Nano)</button>
+            <button id="btn-cloud" type="button" class="secondary">云端深度对比 / 报告 (Cloud)</button>
+            <button id="btn-ping" type="button" class="ghost">端侧连通性自检</button>
+          </div>
+        </section>
+
+        <section class="card output-card">
+          <div class="card-head">
+            <h2>输出结果</h2>
+            <div class="output-tools">
+              <span id="output-mode-pill" class="pill">待命</span>
+              <button id="btn-copy-output" type="button" class="ghost small">复制结果</button>
+            </div>
+          </div>
+          <div id="redact-summary" class="redact-summary" hidden></div>
+          <pre id="output-box" class="output">尚未执行推理。点击上方「一键演示」或先填入样例再运行「本地脱敏 + 提炼 (Nano)」。</pre>
+        </section>
+      </div>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

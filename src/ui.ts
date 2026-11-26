@@ -1,5 +1,13 @@
 export type EngineMode = "idle" | "on_device" | "in_cloud" | "error";
 
+export type PipelineStage =
+  | "idle"
+  | "local"
+  | "local_done"
+  | "cloud"
+  | "cloud_done"
+  | "cloud_degraded";
+
 export type AppState =
   | "INIT"
   | "READY_LOCAL"
@@ -14,6 +22,9 @@ const byId = <T extends HTMLElement>(id: string): T => {
   if (!el) throw new Error(`Missing DOM element: #${id}`);
   return el as T;
 };
+
+const optById = <T extends HTMLElement>(id: string): T | null =>
+  document.getElementById(id) as T | null;
 
 export const SAMPLES = {
   medical:
@@ -35,9 +46,23 @@ export const dom = {
   btnPing: () => byId<HTMLButtonElement>("btn-ping"),
   btnSampleMedical: () => byId<HTMLButtonElement>("btn-sample-medical"),
   btnSampleReceipt: () => byId<HTMLButtonElement>("btn-sample-receipt"),
+  btnQuickMedical: () => optById<HTMLButtonElement>("btn-quick-medical"),
+  btnQuickReceipt: () => optById<HTMLButtonElement>("btn-quick-receipt"),
+  btnCopyOutput: () => optById<HTMLButtonElement>("btn-copy-output"),
+  memoryBadge: () => optById<HTMLSpanElement>("memory-badge"),
+  stateHint: () => optById<HTMLElement>("state-hint"),
+  outputModePill: () => optById<HTMLSpanElement>("output-mode-pill"),
+  redactSummary: () => optById<HTMLDivElement>("redact-summary"),
+  stepRedact: () => optById<HTMLDivElement>("step-redact"),
+  stepNano: () => optById<HTMLDivElement>("step-nano"),
+  stepCloud: () => optById<HTMLDivElement>("step-cloud"),
 };
 
-export function renderEngineStatus(mode: EngineMode, label: string): void {
+export function renderEngineStatus(
+  mode: EngineMode,
+  label: string,
+  privacyOverride?: string
+): void {
   const badge = dom.engineBadge();
   const privacy = dom.privacyBadge();
   badge.textContent = label;
@@ -47,22 +72,102 @@ export function renderEngineStatus(mode: EngineMode, label: string): void {
   if (mode === "on_device") {
     badge.classList.add("badge-local");
     privacy.classList.add("badge-local");
-    privacy.textContent = "数据未离开本机 · 断网可用";
+    privacy.textContent = privacyOverride ?? "数据未离开本机 · 断网可用";
   } else if (mode === "in_cloud") {
     badge.classList.add("badge-cloud");
     privacy.classList.add("badge-cloud");
-    privacy.textContent = "云端 Gemini 推理（Firebase AI Logic）";
+    privacy.textContent = privacyOverride ?? "云端 Gemini 推理（Firebase AI Logic）";
   } else if (mode === "error") {
     badge.classList.add("badge-warn");
     privacy.classList.add("badge-warn");
-    privacy.textContent = "推理受阻";
+    privacy.textContent = privacyOverride ?? "推理受阻";
   } else {
-    privacy.textContent = "待命";
+    privacy.textContent = privacyOverride ?? "待命";
   }
 }
 
+const STATE_HINTS: Record<AppState, string> = {
+  INIT: "正在检测端侧模型...",
+  READY_LOCAL: "端侧 Nano 就绪，断网亦可用",
+  READY_CLOUD_ONLY: "本地脱敏可用，提炼将尝试云端回退",
+  RUNNING_LOCAL: "本机脱敏 + Gemini Nano 推理中",
+  RUNNING_CLOUD: "仅发送脱敏文本至云端分析中",
+  FALLBACK_CLOUD: "本地已脱敏，尝试云端回退提炼",
+  ERROR: "当前操作受阻，本地脱敏仍可继续",
+};
+
 export function renderState(state: AppState): void {
   dom.stateLabel().textContent = state;
+  const hint = dom.stateHint();
+  if (hint) hint.textContent = STATE_HINTS[state];
+}
+
+export function renderPipelineStep(stage: PipelineStage): void {
+  const s1 = dom.stepRedact();
+  const s2 = dom.stepNano();
+  const s3 = dom.stepCloud();
+  if (!s1 || !s2 || !s3) return;
+  for (const el of [s1, s2, s3]) el.classList.remove("is-active", "is-done", "is-warn");
+  if (stage === "local") {
+    s1.classList.add("is-done");
+    s2.classList.add("is-active");
+  } else if (stage === "local_done") {
+    s1.classList.add("is-done");
+    s2.classList.add("is-active");
+  } else if (stage === "cloud" || stage === "cloud_done") {
+    s1.classList.add("is-done");
+    s2.classList.add("is-done");
+    s3.classList.add("is-active");
+  } else if (stage === "cloud_degraded") {
+    s1.classList.add("is-done");
+    s3.classList.add("is-warn");
+  }
+}
+
+export function renderMemoryCount(count: number): void {
+  const el = dom.memoryBadge();
+  if (!el) return;
+  el.textContent =
+    count >= 2
+      ? `内存已缓存脱敏文档：${count} 份（可跨文档对比）`
+      : `内存已缓存脱敏文档：${count} 份`;
+  el.className = count > 0 ? "pill pill-local" : "pill";
+}
+
+export function renderOutputMode(
+  label: string,
+  tone: "idle" | "local" | "cloud" | "warn"
+): void {
+  const el = dom.outputModePill();
+  if (!el) return;
+  el.textContent = label;
+  el.className = tone === "idle" ? "pill" : `pill pill-${tone}`;
+}
+
+export function renderRedactSummary(mapping: Record<string, string> | null): void {
+  const box = dom.redactSummary();
+  if (!box) return;
+  box.replaceChildren();
+  const tokens = mapping ? Object.values(mapping) : [];
+  if (tokens.length === 0) {
+    box.hidden = true;
+    return;
+  }
+  const counts = new Map<string, number>();
+  for (const tok of tokens) {
+    const label = tok.replace(/^\[([^\d\]]+)\d*\]$/, "[$1]");
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const lead = document.createElement("span");
+  lead.textContent = `本地已替换 ${tokens.length} 项（映射仅存内存）：`;
+  box.appendChild(lead);
+  for (const [label, n] of counts) {
+    const chip = document.createElement("span");
+    chip.className = "redact-chip";
+    chip.textContent = `${label} ×${n}`;
+    box.appendChild(chip);
+  }
+  box.hidden = false;
 }
 
 export function renderLatency(source: "on_device" | "in_cloud", ms: number): void {
@@ -80,4 +185,8 @@ export function setBusy(busy: boolean): void {
   dom.btnPing().disabled = busy;
   dom.btnSampleMedical().disabled = busy;
   dom.btnSampleReceipt().disabled = busy;
+  const qm = dom.btnQuickMedical();
+  const qr = dom.btnQuickReceipt();
+  if (qm) qm.disabled = busy;
+  if (qr) qr.disabled = busy;
 }

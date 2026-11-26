@@ -10,11 +10,17 @@ People regularly need AI help to organize medical records, insurance receipts, a
 
 LocalFirst Privacy Workbench splits inference cleanly between on-device and cloud execution:
 
-1. **Local Deterministic Redaction (`src/redact.ts`)**: Runs synchronously in the browser to replace PII (names, ID numbers, bank cards, phone numbers, addresses, emails) with structured placeholders like `[姓名]` and `[身份证号]` while preserving clinical and financial facts (hospitals, diagnoses, medications, merchants, amounts). The redaction mapping stays strictly in memory.
-2. **On-Device Extraction (`src/ondevice.ts` + Chrome Prompt API)**: Uses `window.LanguageModel` (Gemini Nano) to summarize the redacted text locally—working even with `navigator.onLine === false`.
-3. **Hybrid Fallback & Cloud Cross-Document Reasoning (`src/cloud.ts` + Firebase AI Logic)**:
-   - When on-device Nano is unavailable, single-document extraction falls back cleanly using Firebase AI Logic with `InferenceMode.PREFER_ON_DEVICE` (with `inCloudParams.model` defaulting to `gemini-2.5-flash-lite`), inspecting `response.inferenceSource` (`ON_DEVICE` vs `IN_CLOUD`) to update the UI badge and latency tracker.
-   - When the user explicitly clicks **云端深度对比 / 报告 (Cloud)**, only the locally redacted documents are sent via `InferenceMode.ONLY_IN_CLOUD` for cross-document expense aggregation, anomaly checks, and reimbursement recommendations.
+1. **Local Deterministic Redaction (`src/redact.ts`)**: Runs synchronously in the browser to replace PII—names (labeled, contextual, honorific), 15/18-digit ID numbers (including `X`/`x` and segmented formats), continuous or spaced/hyphenated bank cards and phone numbers, emails, and Chinese addresses—with structured placeholders like `[姓名]` and `[身份证号]` while preserving clinical and financial facts (hospitals, diagnoses, medications, merchants, amounts). The redaction mapping stays strictly in memory.
+2. **On-Device Extraction (`src/ondevice.ts` + Chrome Prompt API)**: Uses `window.LanguageModel` (Gemini Nano) to summarize the redacted text locally—working even with `navigator.onLine === false`, with one-click demo buttons, live pipeline step indicators, and redaction summary chips.
+3. **Hybrid Fallback, Cloud Cross-Document Reasoning & Graceful Degradation (`src/cloud.ts`, `src/main.ts`)**:
+   - When on-device Nano is unavailable, single-document extraction falls back using Firebase AI Logic (`InferenceMode.PREFER_ON_DEVICE`, default `gemini-2.5-flash-lite`) and inspects `response.inferenceSource` (`ON_DEVICE` vs `IN_CLOUD`).
+   - Clicking **云端深度对比 / 报告 (Cloud)** transmits only locally redacted documents via `InferenceMode.ONLY_IN_CLOUD` for cross-document expense aggregation and anomaly checks.
+   - If cloud calls are unavailable (e.g., offline or Firebase App Check HTTP 401 enforcement), the UI displays actionable recovery guidance while preserving local redaction and memory-cached redacted documents.
+
+## Current Verification Status
+
+- **On-device redaction + Gemini Nano extraction**: Verified PASS (medical sample: 5 PII items redacted with zero false positives; receipt sample: 4 PII items redacted with zero false positives; offline execution confirmed).
+- **Cloud cross-document comparison**: Implementation ready in `src/cloud.ts` (Firebase AI Logic + App Check hook); currently gated by Firebase Console App Check enforcement (HTTP 401) until enforcement is relaxed or a debug token is registered.
 
 ## Local Setup
 
