@@ -1,0 +1,47 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f8fb;
+  --card: #ffffff;
+  --ink: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --local: #0f766e;
+  --local-bg: #ccfbf1;
+  --cloud: #1d4ed8;
+  --cloud-bg: #dbeafe;
+  --warn: #b45309;
+  --warn-bg: #fef3c7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 20px;
+}
+.topbar, .layout { max-width: 920px; margin: 0 auto 16px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+h1 { margin: 0; font-size: 1.35rem; }
+h2 { margin: 0 0 10px; font-size: 1rem; }
+.subtitle { margin: 4px 0 0; color: var(--muted); font-size: 0.88rem; }
+.badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.badge { padding: 6px 12px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; background: #e5e7eb; }
+.badge-local { background: var(--local-bg); color: var(--local); }
+.badge-cloud { background: var(--cloud-bg); color: var(--cloud); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.card-head h2 { margin: 0; }
+.sample-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+button.small { padding: 5px 10px; font-size: 0.82rem; }
+textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+.actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+button { padding: 8px 14px; border: 0; border-radius: 8px; cursor: pointer; background: var(--local); color: #fff; font-weight: 600; }
+button.secondary { background: var(--cloud); }
+button.ghost { background: #e5e7eb; color: var(--ink); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.metric { padding: 10px; background: var(--bg); border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
+.metric span { font-size: 0.8rem; color: var(--muted); }
+.output { margin: 0; white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; min-height: 96px; }
