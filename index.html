@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LocalFirst 隐私票据脱敏与智能整理台</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>LocalFirst 隐私票据脱敏台</h1>
+        <p class="subtitle">端侧 Gemini Nano 本地脱敏 · 云端 Gemini 深度分析</p>
+      </div>
+      <div class="badges">
+        <span id="engine-badge" class="badge badge-idle">检测端侧模型中...</span>
+        <span id="privacy-badge" class="badge badge-privacy">等待推理</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <div class="card-head">
+          <h2>输入票据 / 病历原文</h2>
+          <div class="sample-actions">
+            <button id="btn-sample-medical" type="button" class="ghost small">填入病历样例</button>
+            <button id="btn-sample-receipt" type="button" class="ghost small">填入票据样例</button>
+          </div>
+        </div>
+        <textarea id="input-text" rows="6" placeholder="粘贴包含姓名、身份证号、卡号、地址等敏感信息的文本..."></textarea>
+        <div class="actions">
+          <button id="btn-ondevice" type="button">本地脱敏 + 提炼 (Nano)</button>
+          <button id="btn-cloud" type="button" class="secondary">云端深度对比 / 报告 (Cloud)</button>
+          <button id="btn-ping" type="button" class="ghost">端侧连通性自检</button>
+        </div>
+      </section>
+
+      <section class="card metrics">
+        <h2>推理延迟对比</h2>
+        <div class="metric-grid">
+          <div class="metric"><span>端侧 Nano</span><strong id="latency-ondevice">-- ms</strong></div>
+          <div class="metric"><span>云端 Gemini</span><strong id="latency-cloud">-- ms</strong></div>
+          <div class="metric"><span>当前状态</span><strong id="state-label">IDLE</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>输出结果</h2>
+        <pre id="output-box" class="output">尚未执行推理。</pre>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
