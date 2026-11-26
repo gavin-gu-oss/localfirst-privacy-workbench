@@ -20,7 +20,7 @@ LocalFirst Privacy Workbench splits inference cleanly between on-device and clou
 ## Current Verification Status
 
 - **On-device redaction + Gemini Nano extraction**: Verified PASS (medical sample: 5 PII items redacted with zero false positives; receipt sample: 4 PII items redacted with zero false positives; offline execution confirmed).
-- **Cloud cross-document comparison**: Implementation ready in `src/cloud.ts` (Firebase AI Logic + App Check hook); currently gated by Firebase Console App Check enforcement (HTTP 401) until enforcement is relaxed or a debug token is registered.
+- **Cloud cross-document comparison**: Verified PASS on 2026-11-26 (`src/cloud.ts`, Firebase AI Logic + App Check hook; demo project enforcement relaxed): badge switches to `Cloud Gemini (Firebase AI)` with ~5.2s cloud latency and a structured expense/anomaly report from redacted texts only. When gated (offline / App Check HTTP 401), the UI shows recovery guidance and local features keep working.
 
 ## Local Setup
 
