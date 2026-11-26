@@ -72,6 +72,8 @@ function getFirebaseApp(): FirebaseApp {
   return cachedApp;
 }
 
+const CLOUD_TIMEOUT_MS = 20_000;
+
 export async function runFirebaseAI(
   prompt: string,
   preferOnDevice = false
@@ -80,24 +82,47 @@ export async function runFirebaseAI(
   const mode = preferOnDevice
     ? InferenceMode.PREFER_ON_DEVICE
     : InferenceMode.ONLY_IN_CLOUD;
-  const model = getGenerativeModel(ai, {
-    mode,
-    onDeviceParams: {
-      createOptions: {
-        expectedInputs: [{ type: "text", languages: ["en"] }],
-        expectedOutputs: [{ type: "text", languages: ["en"] }],
+  const model = getGenerativeModel(
+    ai,
+    {
+      mode,
+      onDeviceParams: {
+        createOptions: {
+          expectedInputs: [{ type: "text", languages: ["en"] }],
+          expectedOutputs: [{ type: "text", languages: ["en"] }],
+        },
       },
+      inCloudParams: { model: CLOUD_MODEL },
     },
-    inCloudParams: { model: CLOUD_MODEL },
-  });
+    { timeout: CLOUD_TIMEOUT_MS }
+  );
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = globalThis.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, CLOUD_TIMEOUT_MS);
+
   const t0 = performance.now();
-  const result = await model.generateContent(prompt);
-  const latencyMs = Math.round(performance.now() - t0);
-  const source =
-    result.response.inferenceSource === InferenceSource.ON_DEVICE
-      ? "on_device"
-      : "in_cloud";
-  return { text: result.response.text(), latencyMs, source };
+  try {
+    const result = await model.generateContent(prompt, {
+      timeout: CLOUD_TIMEOUT_MS,
+      signal: controller.signal,
+    });
+    const latencyMs = Math.round(performance.now() - t0);
+    const source =
+      result.response.inferenceSource === InferenceSource.ON_DEVICE
+        ? "on_device"
+        : "in_cloud";
+    return { text: result.response.text(), latencyMs, source };
+  } catch (err) {
+    if (timedOut) {
+      throw new Error(`云端请求超时（超过 ${CLOUD_TIMEOUT_MS / 1000} 秒），请检查网络或稍后重试。`);
+    }
+    throw err;
+  } finally {
+    globalThis.clearTimeout(timer);
+  }
 }
 
 export async function runCrossDocCompare(
@@ -108,17 +133,24 @@ export async function runCrossDocCompare(
   }
   const docs = redactedDocs.map((d) => d.trim()).filter(Boolean);
   if (docs.length === 0) {
-    throw new Error("请至少提供一份已脱敏文本用于云端跨文档对比。");
+    throw new Error("请至少提供一份已脱敏文本用于云端深度分析。");
   }
   const merged = docs
     .map((doc, idx) => `【文档 ${idx + 1}（已脱敏）】\n${doc}`)
     .join("\n\n");
+  const isMulti = docs.length >= 2;
   const prompt = [
-    "你是医疗与财务票据核对助手。以下均为已在本地脱敏的文档，请勿猜测隐私原值。",
-    "请用简体中文按以下 3 个标题输出简洁报告：",
-    "1. 费用汇总（逐项列出金额并计算总计）",
-    "2. 异常项核对（如重复开药、日期冲突、金额不一致或可疑项；无异常请明确说明）",
-    "3. 跨文档对比结论（用 2-4 条要点总结关联关系与核销建议）",
+    "你是医疗与财务票据核对助手。以下均为已在本地脱敏的文档，严禁猜测隐私原值，请原样保留文档中的编号占位符（如 [姓名1]、[姓名2]、[手机号1] 等）以便用户在本地还原。",
+    isMulti
+      ? "请用简体中文按以下 3 个标题输出简洁、可核查的跨文档对比报告："
+      : "请用简体中文按以下 3 个标题输出简洁、可核查的单文档深度核对报告：",
+    "1. 费用汇总（逐项列出金额、自行验算明细之和与实付金额是否一致，并给出总计）",
+    isMulti
+      ? "2. 异常项核对（重点核查：主体是否一致如 [姓名1] 与 [姓名2]、是否跨城、是否重复开药/购药、日期先后是否合理、明细之和与实付总金额是否一致、是否混入非本次诊疗报销项；无异常请明确说明）"
+      : "2. 异常项核对（重点核查：明细之和与实付金额是否一致、日期与项目合理性、是否存在非报销项混入；无异常请明确说明）",
+    isMulti
+      ? "3. 跨文档对比结论与核销建议（用 2-4 条要点总结关联关系与具体复核动作，引用原始占位符）"
+      : "3. 核销建议（用 2-3 条要点总结报销注意点，引用原始占位符）",
     "",
     merged,
   ].join("\n");

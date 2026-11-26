@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 8123",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 8123"
+    "preview": "vite preview --host 127.0.0.1 --port 8123",
+    "test:redact": "node scripts/test-redact.mjs"
   },
   "dependencies": {
     "firebase": "^13.4.0"

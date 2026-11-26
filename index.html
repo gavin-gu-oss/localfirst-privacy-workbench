@@ -3,108 +3,193 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LocalFirst 隐私票据脱敏与智能整理台</title>
-    <link rel="icon" href="data:," />
+    <title>LocalFirst 隐私病历/票据脱敏台 · Privacy Workbench</title>
+    <meta
+      name="description"
+      content="Local-first medical record & receipt PII redaction on-device with Chrome Gemini Nano, plus redacted-only cross-document cloud audit via Firebase AI Logic."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%230f766e' d='M32 4 8 14v16c0 15.5 10.2 28.6 24 32 13.8-3.4 24-16.5 24-32V14L32 4z'/%3E%3Crect x='22' y='28' width='20' height='15' rx='3' fill='%23ffffff'/%3E%3Cpath fill='none' stroke='%23ffffff' stroke-width='4' stroke-linecap='round' d='M25 28v-5a7 7 0 0 1 14 0v5'/%3E%3C/svg%3E"
+    />
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <span class="kicker">Hybrid AI Workbench · Privacy First</span>
-        <h1>LocalFirst 隐私票据脱敏台</h1>
-        <p class="subtitle">敏感隐私在端侧本地脱敏与提炼，跨文档深度分析仅将脱敏占位符交由云端 Gemini</p>
+      <div class="brand">
+        <span class="kicker">Hybrid AI Workbench · Local-First Privacy</span>
+        <h1>LocalFirst 隐私病历/票据脱敏台</h1>
+        <p class="subtitle">
+          敏感隐私本地脱敏并留存内存，云端跨文档分析仅接收脱敏占位符 · PII redacted on-device; cloud sees placeholders only
+        </p>
       </div>
-      <div class="badges">
-        <span id="engine-badge" class="badge badge-idle">检测端侧模型中...</span>
-        <span id="privacy-badge" class="badge badge-privacy">等待推理</span>
+      <div class="badges" aria-live="polite">
+        <span id="engine-badge" class="badge badge-idle">检测端侧 Nano 中...</span>
+        <span id="cloud-badge" class="badge badge-idle">检测云端状态...</span>
+        <span id="privacy-badge" class="badge badge-local">数据未离开本机 · Data stays local</span>
       </div>
     </header>
 
     <main class="layout">
-      <section class="flow-strip" aria-label="混合推理流程">
+      <section class="flow-strip" aria-label="混合推理流程 Hybrid Pipeline">
         <div id="step-redact" class="flow-step">
           <span class="step-num">01</span>
           <div>
-            <strong>本地零外发脱敏</strong>
-            <p>正则精准替换隐私，医院/药名/商户零误伤，映射仅存内存</p>
+            <strong>本地脱敏 · Local Redaction</strong>
+            <p>替换姓名/身份证/卡号/地址，保留医院/诊断/药名/商户，映射仅存内存</p>
           </div>
         </div>
         <div id="step-nano" class="flow-step">
           <span class="step-num">02</span>
           <div>
-            <strong>端侧 Gemini Nano 提炼</strong>
-            <p>Chrome Prompt API 本机推理，断网可用，数据不离设备</p>
+            <strong>端侧提炼 · On-Device Nano</strong>
+            <p>Chrome Prompt API 本机提炼要点，断网可用，数据不离设备</p>
           </div>
         </div>
         <div id="step-cloud" class="flow-step flow-step-cloud">
           <span class="step-num">03</span>
           <div>
-            <strong>云端 Gemini 跨文档分析</strong>
-            <p>Firebase AI Logic 仅收脱敏占位符，完成费用汇总与异常核对</p>
+            <strong>云端对比 · Cloud Gemini</strong>
+            <p>Firebase AI Logic 仅收脱敏占位符，完成跨文档算账与异常核对</p>
           </div>
         </div>
       </section>
 
-      <section class="card quick-demo-bar">
-        <div class="quick-demo-copy">
-          <strong>评委一键演示</strong>
-          <span>一步完成「填入样例 → 本地零误伤脱敏 → 端侧 Nano 要点提炼」，并自动缓存脱敏文本供云端对比</span>
+      <section class="card control-bar">
+        <div class="quick-demo-group">
+          <span class="group-label">一键演示 · One-Click Demo</span>
+          <div class="quick-demo-actions">
+            <button id="btn-quick-medical" type="button">一键演示：病历 · Medical</button>
+            <button id="btn-quick-receipt" type="button" class="outline-local">一键演示：票据 · Receipt</button>
+          </div>
         </div>
-        <div class="quick-demo-actions">
-          <button id="btn-quick-medical" type="button">一键演示：病历脱敏 + 提炼</button>
-          <button id="btn-quick-receipt" type="button" class="outline-local">一键演示：票据脱敏 + 提炼</button>
+
+        <div class="metrics-inline" aria-live="polite">
+          <div class="metric-chip metric-local">
+            <span>本地脱敏 Local</span>
+            <strong id="latency-redact">-- ms</strong>
+          </div>
+          <div class="metric-chip metric-local">
+            <span>端侧 Nano</span>
+            <strong id="latency-ondevice">--</strong>
+          </div>
+          <div class="metric-chip metric-cloud">
+            <span>云端 (含网络)</span>
+            <strong id="latency-cloud">--</strong>
+          </div>
+          <div class="metric-chip metric-state">
+            <span id="state-hint">正在检测端侧模型...</span>
+            <strong id="state-label">检测中 · Checking</strong>
+          </div>
+        </div>
+
+        <div class="memory-group">
+          <span id="memory-badge" class="pill">内存缓存：0 份</span>
+          <button id="btn-clear-memory" type="button" class="ghost small" title="清空内存中的脱敏文档与占位符映射">
+            清空内存 · Clear
+          </button>
         </div>
       </section>
-      <section class="card metrics">
-        <div class="card-head">
-          <h2>混合引擎与推理延迟对比</h2>
-          <span id="memory-badge" class="pill">内存已缓存脱敏文档：0 份</span>
-        </div>
-        <div class="metric-grid">
-          <div class="metric metric-local">
-            <span>端侧 Nano 延迟</span>
-            <strong id="latency-ondevice">-- ms</strong>
-            <small>本地零外发 · 断网可用</small>
-          </div>
-          <div class="metric metric-cloud">
-            <span>云端 Gemini 延迟</span>
-            <strong id="latency-cloud">-- ms</strong>
-            <small>仅传脱敏占位符 · Firebase AI</small>
-          </div>
-          <div class="metric metric-state">
-            <span>当前状态</span>
-            <strong id="state-label">IDLE</strong>
-            <small id="state-hint">正在检测端侧模型...</small>
-          </div>
-        </div>
-      </section>
+
+      <details id="nano-setup-guide" class="setup-guide" hidden>
+        <summary>端侧 Gemini Nano 未就绪？查看 Chrome 138+ 启用指南 · Enable On-Device Nano</summary>
+        <ol>
+          <li>在 Chrome 138+ 地址栏打开 <code>chrome://flags/#optimization-guide-on-device-model</code> → 设为 <strong>Enabled BypassPerfRequirement</strong></li>
+          <li>打开 <code>chrome://flags/#prompt-api-for-gemini-nano</code> → 设为 <strong>Enabled</strong>，重启浏览器</li>
+          <li>未启用 Nano 时，<strong>本地正则脱敏依然 100% 离线可用</strong>；云端提炼仅在您预览并确认后发送脱敏文本。</li>
+        </ol>
+      </details>
 
       <div class="workspace">
-        <section class="card">
+        <section class="card input-card">
           <div class="card-head">
-            <h2>输入票据 / 病历原文</h2>
+            <label for="input-text" class="card-title">输入病历 / 票据原文 · Input Document</label>
             <div class="sample-actions">
-              <button id="btn-sample-medical" type="button" class="ghost small">填入病历样例</button>
-              <button id="btn-sample-receipt" type="button" class="ghost small">填入票据样例</button>
+              <button id="btn-sample-medical" type="button" class="ghost small">病历样例</button>
+              <button id="btn-sample-receipt" type="button" class="ghost small">票据样例</button>
+              <button id="btn-sample-en" type="button" class="ghost small">EN Sample</button>
             </div>
           </div>
-          <textarea id="input-text" rows="8" placeholder="粘贴包含姓名、身份证号、银行卡号、手机号、地址、邮箱的文本，或点击上方样例 / 一键演示..."></textarea>
+
+          <textarea
+            id="input-text"
+            rows="7"
+            placeholder="粘贴含姓名、身份证号、银行卡号、手机号、医保号、地址的病历或报销票据（多份文档可用 --- 分隔），或点击上方样例 / 一键演示...&#10;Paste medical records or receipts (use --- to separate multiple docs), or click a sample above..."
+          ></textarea>
+
+          <div class="custom-terms-row">
+            <label for="custom-terms">自定义补充脱敏词 · Custom Terms</label>
+            <input
+              id="custom-terms"
+              type="text"
+              placeholder="可选，逗号分隔（如：王主任, 特殊代号） / Optional, comma-separated"
+            />
+          </div>
+
+          <div id="memory-docs-list" class="memory-docs-list" hidden></div>
+
           <div class="actions">
-            <button id="btn-ondevice" type="button">本地脱敏 + 提炼 (Nano)</button>
-            <button id="btn-cloud" type="button" class="secondary">云端深度对比 / 报告 (Cloud)</button>
-            <button id="btn-ping" type="button" class="ghost">端侧连通性自检</button>
+            <button id="btn-ondevice" type="button">本地脱敏 + 提炼 · Local Nano</button>
+            <button id="btn-cloud" type="button" class="secondary">云端深度分析 · Cloud Audit</button>
+            <button id="btn-ping" type="button" class="ghost">端侧自检 · Ping</button>
           </div>
         </section>
 
-        <section class="card output-card">
+        <section class="card output-card" aria-live="polite">
           <div class="card-head">
-            <h2>输出结果</h2>
+            <h2>输出结果 · Output</h2>
             <div class="output-tools">
-              <span id="output-mode-pill" class="pill">待命</span>
-              <button id="btn-copy-output" type="button" class="ghost small">复制结果</button>
+              <span id="output-mode-pill" class="pill">待命 · Idle</span>
+              <button id="btn-restore-toggle" type="button" class="outline-local small" hidden>
+                在本地还原真名 · Local Restore
+              </button>
+              <button id="btn-copy-output" type="button" class="ghost small">复制脱敏结果</button>
             </div>
           </div>
+
           <div id="redact-summary" class="redact-summary" hidden></div>
-          <pre id="output-box" class="output">尚未执行推理。点击上方「一键演示」或先填入样例再运行「本地脱敏 + 提炼 (Nano)」。</pre>
+
+          <div id="restore-banner" class="restore-banner" hidden>
+            仅在本机内存还原显示，云端从未收到隐私原值 · Restored in local memory only (never sent to cloud)
+          </div>
+
+          <div id="compare-pane" class="compare-pane" hidden>
+            <div class="compare-col">
+              <div class="compare-head">原文（仅留本机）· Raw (Local Only)</div>
+              <div id="compare-raw" class="compare-body"></div>
+            </div>
+            <div class="compare-col compare-col-redacted">
+              <div class="compare-head">脱敏后（占位符高亮）· Redacted</div>
+              <div id="compare-redacted" class="compare-body"></div>
+            </div>
+          </div>
+
+          <div id="cloud-preview-panel" class="cloud-preview-panel" hidden>
+            <div class="preview-head">
+              <strong id="cloud-preview-title">即将发送至云端的内容预览（仅含脱敏占位符 · Cloud Payload Preview）</strong>
+              <span>请确认下方文本不含原始敏感信息后再发送</span>
+            </div>
+            <div id="cloud-preview-body" class="preview-body"></div>
+            <div class="preview-actions">
+              <button id="btn-confirm-cloud" type="button" class="secondary">确认仅发送脱敏文本 · Confirm &amp; Send</button>
+              <button id="btn-cancel-cloud" type="button" class="ghost">取消 · Cancel</button>
+            </div>
+          </div>
+
+          <div id="degraded-panel" class="degraded-panel" hidden>
+            <div class="degraded-head">
+              <strong id="degraded-title">云端暂不可用</strong>
+              <button id="btn-retry-cloud" type="button" class="secondary small">立即重试 · Retry Cloud</button>
+            </div>
+            <p id="degraded-reason" class="degraded-reason"></p>
+            <p id="degraded-status" class="degraded-status"></p>
+            <ul id="degraded-steps" class="degraded-steps"></ul>
+            <details class="tech-details">
+              <summary>技术详情 / Technical Details</summary>
+              <pre id="degraded-tech"></pre>
+            </details>
+          </div>
+
+          <div id="output-box" class="output" role="region" aria-label="推理结果输出">尚未执行推理。点击上方「一键演示：病历」或填入样例后开始本地脱敏。</div>
         </section>
       </div>
     </main>
