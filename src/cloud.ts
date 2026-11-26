@@ -22,7 +22,7 @@ export const FIREBASE_CONFIG = {
 };
 
 const CLOUD_MODEL =
-  import.meta.env.VITE_FIREBASE_CLOUD_MODEL || "gemini-2.5-flash-lite";
+  import.meta.env.VITE_FIREBASE_CLOUD_MODEL || "gemini-3.5-flash-lite";
 
 export function isCloudConfigured(): boolean {
   return (
